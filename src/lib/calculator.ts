@@ -1,4 +1,5 @@
 import { findTicker, RISK_TIER_DEFAULTS } from "./tickers";
+import { calculatePensionContribution } from "./ukPension";
 import type { Holding, MonteCarloBand, MonteCarloResult, ProjectionResult, SimplePlan, YearPoint } from "./types";
 
 const FALLBACK = RISK_TIER_DEFAULTS.moderate;
@@ -10,7 +11,7 @@ function returnAndVolatility(holding: Holding): { expectedReturn: number; volati
   return FALLBACK;
 }
 
-/** Blends a list of holdings into one expected return & volatility, weighted by dollar amount. */
+/** Blends a list of holdings into one expected return & volatility, weighted by amount. */
 export function blendPortfolio(holdings: Holding[]): { blendedReturn: number; blendedVolatility: number; startingBalance: number } {
   const startingBalance = holdings.reduce((sum, h) => sum + Math.max(0, h.amount), 0);
 
@@ -33,9 +34,46 @@ export function blendPortfolio(holdings: Holding[]): { blendedReturn: number; bl
   return { blendedReturn, blendedVolatility, startingBalance };
 }
 
-export function runProjection(plan: SimplePlan): ProjectionResult {
+interface AnnualContributions {
+  annualContribution: number;
+  annualPensionContribution: number;
+  annualPersonalContribution: number;
+  annualEmployeeNetCost: number;
+  annualEmployerContribution: number;
+  annualTaxReliefFreebie: number;
+}
+
+function computeContributions(plan: SimplePlan): AnnualContributions {
+  const personal = plan.salary * (plan.savingsRatePercent / 100);
+
+  if (!plan.pensionEnabled) {
+    return {
+      annualContribution: personal,
+      annualPensionContribution: 0,
+      annualPersonalContribution: personal,
+      annualEmployeeNetCost: 0,
+      annualEmployerContribution: 0,
+      annualTaxReliefFreebie: 0,
+    };
+  }
+
+  const pension = calculatePensionContribution(plan.salary, plan.employeePensionPercent, plan.employerPensionPercent);
+  const taxReliefFreebie = pension.employeeGross - pension.employeeNetCost;
+
+  return {
+    annualContribution: personal + pension.totalIntoPot,
+    annualPensionContribution: pension.totalIntoPot,
+    annualPersonalContribution: personal,
+    annualEmployeeNetCost: pension.employeeNetCost,
+    annualEmployerContribution: pension.employerContribution,
+    annualTaxReliefFreebie: taxReliefFreebie,
+  };
+}
+
+/** @param delayYears Optional — pushes contributions out to model "what if I start late". */
+export function runProjection(plan: SimplePlan, delayYears = 0): ProjectionResult {
   const { blendedReturn, blendedVolatility, startingBalance } = blendPortfolio(plan.holdings);
-  const annualContribution = plan.salary * (plan.savingsRatePercent / 100);
+  const contributions = computeContributions(plan);
 
   const years: YearPoint[] = [];
   let balance = startingBalance;
@@ -43,8 +81,10 @@ export function runProjection(plan: SimplePlan): ProjectionResult {
 
   for (let y = 0; y <= plan.yearsHorizon; y++) {
     if (y > 0) {
-      balance = (balance + annualContribution) * (1 + blendedReturn / 100);
-      contributed += annualContribution;
+      const isContributing = y > delayYears;
+      const contribution = isContributing ? contributions.annualContribution : 0;
+      balance = (balance + contribution) * (1 + blendedReturn / 100);
+      contributed += contribution;
     }
     years.push({ year: y, balance, contributed });
   }
@@ -55,7 +95,7 @@ export function runProjection(plan: SimplePlan): ProjectionResult {
   return {
     years,
     startingBalance,
-    annualContribution,
+    ...contributions,
     blendedReturn,
     blendedVolatility,
     finalBalance,
@@ -82,7 +122,7 @@ const SIMULATION_RUNS = 400;
 
 export function runMonteCarlo(plan: SimplePlan): MonteCarloResult {
   const { blendedReturn, blendedVolatility, startingBalance } = blendPortfolio(plan.holdings);
-  const annualContribution = plan.salary * (plan.savingsRatePercent / 100);
+  const { annualContribution } = computeContributions(plan);
   const balancesByYear: number[][] = Array.from({ length: plan.yearsHorizon + 1 }, () => []);
 
   for (let run = 0; run < SIMULATION_RUNS; run++) {
@@ -106,5 +146,11 @@ export function runMonteCarlo(plan: SimplePlan): MonteCarloResult {
     };
   });
 
-  return { bands };
+  const lastBand = bands[bands.length - 1];
+
+  return {
+    bands,
+    pessimisticFinalBalance: lastBand?.p10 ?? startingBalance,
+    medianFinalBalance: lastBand?.p50 ?? startingBalance,
+  };
 }

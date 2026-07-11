@@ -11,9 +11,15 @@ export interface Holding {
 }
 
 export interface SimplePlan {
-  /** Annual salary/income, in dollars. */
+  /** Annual salary/income, before tax. */
   salary: number;
-  /** % of salary invested each year. */
+  /** Workplace pension: auto-enrolment on/off. */
+  pensionEnabled: boolean;
+  /** % of qualifying earnings, employee side (UK minimum 5%, includes tax relief). */
+  employeePensionPercent: number;
+  /** % of qualifying earnings, employer side (UK minimum 3%). */
+  employerPensionPercent: number;
+  /** % of salary invested each year outside the pension (ISA/general account). */
   savingsRatePercent: number;
   holdings: Holding[];
   /** Years from now until the money is needed. */
@@ -30,6 +36,11 @@ export interface ProjectionResult {
   years: YearPoint[];
   startingBalance: number;
   annualContribution: number;
+  annualPensionContribution: number;
+  annualPersonalContribution: number;
+  annualEmployeeNetCost: number;
+  annualEmployerContribution: number;
+  annualTaxReliefFreebie: number;
   blendedReturn: number;
   blendedVolatility: number;
   finalBalance: number;
@@ -46,4 +57,7 @@ export interface MonteCarloBand {
 
 export interface MonteCarloResult {
   bands: MonteCarloBand[];
+  /** The pessimistic (10th percentile) final balance — plan around this, not the average. */
+  pessimisticFinalBalance: number;
+  medianFinalBalance: number;
 }
