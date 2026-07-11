@@ -1,63 +1,95 @@
-export type RiskTier = "conservative" | "moderate" | "aggressive";
+export type PollenType = "tree" | "grass" | "weed";
 
-export interface Holding {
+export type PollenLevel = "low" | "moderate" | "high" | "very-high";
+
+export type SensitivityLevel = "mild" | "normal" | "high";
+
+export type DataMode = "auto" | "manual";
+
+export type DataSource = "live" | "estimated" | "manual";
+
+export interface ClimateProfile {
+  /** Relative exposure ceiling per pollen type, ~0.3 (low) to ~1.4 (very high). */
+  intensity: Record<PollenType, number>;
+  /** Muted, less sharply-seasonal pollen curve (equatorial/tropical climates). */
+  tropical?: boolean;
+}
+
+export interface CountryLocation {
   id: string;
-  /** Ticker symbol if known, or a free-text label the student typed. */
-  ticker: string;
-  /** Current dollar amount held in this investment. */
-  amount: number;
-  /** Only set when the ticker isn't in the built-in reference table. */
-  riskTier?: RiskTier;
+  name: string;
+  region: string;
+  lat: number;
+  lon: number;
+  hemisphere: "N" | "S";
+  climate: ClimateProfile;
 }
 
-export interface SimplePlan {
-  /** Annual salary/income, before tax. */
-  salary: number;
-  /** Workplace pension: auto-enrolment on/off. */
-  pensionEnabled: boolean;
-  /** % of qualifying earnings, employee side (UK minimum 5%, includes tax relief). */
-  employeePensionPercent: number;
-  /** % of qualifying earnings, employer side (UK minimum 3%). */
-  employerPensionPercent: number;
-  /** % of salary invested each year outside the pension (ISA/general account). */
-  savingsRatePercent: number;
-  holdings: Holding[];
-  /** Years from now until the money is needed. */
-  yearsHorizon: number;
+export interface CustomLocation {
+  id: string;
+  name: string;
+  lat: number;
+  lon: number;
+  hemisphere: "N" | "S";
 }
 
-export interface YearPoint {
-  year: number;
-  balance: number;
-  contributed: number;
+export interface WeatherSnapshot {
+  windKph: number;
+  humidityPercent: number;
+  precipMm: number;
 }
 
-export interface ProjectionResult {
-  years: YearPoint[];
-  startingBalance: number;
-  annualContribution: number;
-  annualPensionContribution: number;
-  annualPersonalContribution: number;
-  annualEmployeeNetCost: number;
-  annualEmployerContribution: number;
-  annualTaxReliefFreebie: number;
-  blendedReturn: number;
-  blendedVolatility: number;
-  finalBalance: number;
-  totalContributed: number;
-  totalGrowth: number;
+export interface PollenReading {
+  source: DataSource;
+  fetchedAt: string;
+  values: Record<PollenType, number>;
+  /** Raw units differ by source: grains/m3 for "live", a 0-100 index for "estimated"/"manual". */
+  unit: "grains-per-m3" | "index";
+  weather?: WeatherSnapshot;
 }
 
-export interface MonteCarloBand {
-  year: number;
-  p10: number;
-  p50: number;
-  p90: number;
+export interface Medicine {
+  id: string;
+  name: string;
+  dose: string;
+  triggerLevel: PollenLevel;
+  lastTakenOn?: string;
 }
 
-export interface MonteCarloResult {
-  bands: MonteCarloBand[];
-  /** The pessimistic (10th percentile) final balance — plan around this, not the average. */
-  pessimisticFinalBalance: number;
-  medianFinalBalance: number;
+export interface EyedropSettings {
+  enabled: boolean;
+  name: string;
+  considerPollen: boolean;
+  considerWind: boolean;
+  considerHumidity: boolean;
+  triggerLevel: PollenLevel;
+  lastUsedOn?: string;
+}
+
+export interface UserSettings {
+  locationId: string;
+  customLocations: CustomLocation[];
+  dataMode: DataMode;
+  manualLevels: Record<PollenType, PollenLevel>;
+  sensitiveTo: Record<PollenType, boolean>;
+  sensitivityLevel: SensitivityLevel;
+  medicines: Medicine[];
+  eyedrops: EyedropSettings;
+  units: "metric" | "imperial";
+}
+
+export interface LevelBreakdown {
+  type: PollenType;
+  level: PollenLevel;
+  rawValue: number;
+}
+
+export interface Recommendation {
+  overallLevel: PollenLevel;
+  breakdown: LevelBreakdown[];
+  takeMedicine: boolean;
+  medicineReason: string;
+  useEyedrops: boolean;
+  eyedropReason: string;
+  dryEyeLevel: PollenLevel;
 }
