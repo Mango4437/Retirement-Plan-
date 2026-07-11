@@ -5,7 +5,6 @@ export function scaleLinear(domain: [number, number], range: [number, number]) {
   return (value: number) => r0 + ((value - d0) / span) * (r1 - r0);
 }
 
-/** Produces "nice" round tick values covering [min, max]. */
 export function niceTicks(min: number, max: number, count = 5): number[] {
   if (min === max) return [min];
   const span = max - min;
@@ -40,20 +39,13 @@ export function areaPath(points: Array<{ x: number; y: number }>, baselineY: num
   return `${top} L${last.x.toFixed(2)},${baselineY} L${first.x.toFixed(2)},${baselineY} Z`;
 }
 
-export function bandPath(
-  upper: Array<{ x: number; y: number }>,
-  lower: Array<{ x: number; y: number }>,
-): string {
+export function bandPath(upper: Array<{ x: number; y: number }>, lower: Array<{ x: number; y: number }>): string {
   if (upper.length === 0 || lower.length === 0) return "";
   const top = upper.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(" ");
-  const bottom = [...lower]
-    .reverse()
-    .map((p) => `L${p.x.toFixed(2)},${p.y.toFixed(2)}`)
-    .join(" ");
+  const bottom = [...lower].reverse().map((p) => `L${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(" ");
   return `${top} ${bottom} Z`;
 }
 
-/** Finds the index of the closest point to a given x pixel coordinate. */
 export function closestIndex(xValues: number[], target: number): number {
   let closest = 0;
   let closestDist = Infinity;

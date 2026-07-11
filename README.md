@@ -1,16 +1,16 @@
-# Retirement Plan Studio
+# Will I Be Rich?
 
-A fully configurable retirement planning application. Every assumption — timeline, income, contributions, investment returns, spending, Social Security, pensions, one-time expenses — is editable, and results update live as a year-by-year projection with an optional Monte Carlo simulation.
+A dead-simple investing growth calculator for people with zero finance background — students figuring out what happens if they actually start investing. Three questions, one chart.
 
-## Features
+## How it works
 
-- **Configurable plan inputs** — timeline (current age, retirement age, life expectancy), income & contributions (salary, growth, savings rate, employer match), investment assumptions (pre/post-retirement returns, inflation, volatility), retirement spending (replacement ratio or fixed amount, withdrawal strategy, tax rate), other income (Social Security, pension, other), and one-time expenses at any age.
-- **Year-by-year projection engine** (`src/lib/calculator.ts`) — models accumulation (contributions + employer match + growth) and decumulation (inflation-adjusted spending net of other income, taxed withdrawals) phases, and reports whether the plan is sustainable through life expectancy.
-- **Monte Carlo simulation** (`src/lib/monteCarlo.ts`) — runs hundreds of randomized-return simulations to estimate a success probability and 10th–90th percentile balance range.
-- **Dashboard** — stat tiles, a balance-over-time chart with the Monte Carlo confidence band, a contributions-vs-growth breakdown, and a retirement income mix chart.
-- **Scenarios** — save named snapshots of a plan, reload them, and compare multiple scenarios' balance projections on one chart.
-- **Persistence** — the current plan and saved scenarios are stored in the browser's `localStorage`; nothing leaves your browser.
-- **Light/dark theme**, responsive layout.
+1. **How much do you earn?** — annual income, plus a slider for what % you want to invest each year.
+2. **What are you invested in?** — add tickers (VOO, AAPL, ...) and dollar amounts. A built-in reference table (`src/lib/tickers.ts`) maps ~20 common tickers to long-term historical average return & volatility, so no live market data or API key is needed. Unrecognized tickers fall back to a simple risk-tier picker (conservative/moderate/aggressive).
+3. **How long until you need the money?** — a years-from-now slider.
+
+The app blends the listed holdings into one expected return/volatility (weighted by dollar amount), then projects year-by-year compound growth (`src/lib/calculator.ts`), plus a lightweight Monte Carlo simulation (400 runs) to show a realistic 10th–90th percentile range alongside the expected path. Everything updates live as you type.
+
+An expandable "What am I assuming?" panel shows the exact blended return and each holding's contribution, so it's never a black box.
 
 ## Getting started
 
@@ -29,9 +29,9 @@ npm run build
 
 ```
 src/
-  lib/            calculation engine, Monte Carlo, types, formatting, chart math
+  lib/            tickers reference table, growth/Monte Carlo calculator, types, formatting, chart math
   hooks/          localStorage-backed state, theme
-  components/     ConfigForm, Dashboard, ScenarioManager, and their subcomponents
+  components/     the 3 step cards, holdings editor, growth chart, results panel
 ```
 
-All figures are estimates for planning purposes only and are not financial advice.
+All figures are rough historical averages, not predictions — this is a learning tool, not financial advice. Your plan is saved to your browser's `localStorage` only; nothing is sent anywhere.
