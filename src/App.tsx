@@ -1,165 +1,137 @@
-import { useMemo, useState } from "react";
-import { COUNTRIES, DEFAULT_COUNTRY_ID, findCountry } from "./lib/countries";
-import { todayKey } from "./lib/format";
-import { computeRecommendation } from "./lib/recommendation";
-import type { CustomLocation, UserSettings } from "./lib/types";
+import { useMemo } from "react";
+import { runProjection, runMonteCarlo } from "./lib/calculator";
+import type { SimplePlan } from "./lib/types";
+import { AUTO_ENROLMENT } from "./lib/ukPension";
 import { useLocalStorage } from "./hooks/useLocalStorage";
-import { usePollenData } from "./hooks/usePollenData";
 import { useTheme } from "./hooks/useTheme";
 import { ThemeToggle } from "./components/ThemeToggle";
-import { SectionCard } from "./components/SectionCard";
-import { LocationPicker } from "./components/LocationPicker";
-import { ConditionsPanel } from "./components/ConditionsPanel";
-import { RecommendationCard } from "./components/RecommendationCard";
-import { SettingsPanel } from "./components/SettingsPanel";
+import { StepCard } from "./components/StepCard";
+import { HoldingsEditor } from "./components/HoldingsEditor";
+import { PensionSection } from "./components/PensionSection";
+import { ResultsPanel } from "./components/ResultsPanel";
+import { formatCurrency } from "./lib/format";
 
-const DEFAULT_SETTINGS: UserSettings = {
-  locationId: DEFAULT_COUNTRY_ID,
-  customLocations: [],
-  dataMode: "auto",
-  manualLevels: { tree: "low", grass: "moderate", weed: "low" },
-  sensitiveTo: { tree: true, grass: true, weed: false },
-  sensitivityLevel: "normal",
-  medicines: [],
-  eyedrops: {
-    enabled: true,
-    name: "",
-    considerPollen: true,
-    considerWind: true,
-    considerHumidity: true,
-    triggerLevel: "moderate",
-  },
-  units: "metric",
+const DEFAULT_PLAN: SimplePlan = {
+  salary: 28000,
+  pensionEnabled: true,
+  employeePensionPercent: AUTO_ENROLMENT.minEmployeePercent,
+  employerPensionPercent: AUTO_ENROLMENT.minEmployerPercent,
+  savingsRatePercent: 5,
+  holdings: [],
+  yearsHorizon: 10,
 };
 
-const FALLBACK_CLIMATE = { intensity: { tree: 1, grass: 1, weed: 1 } };
-
 function App() {
-  const [settings, setSettings] = useLocalStorage<UserSettings>("hayfever-tracker:settings", DEFAULT_SETTINGS);
+  const [plan, setPlan] = useLocalStorage<SimplePlan>("investing-planner:plan-uk", DEFAULT_PLAN);
   const { theme, setTheme } = useTheme();
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
-  const patch = (p: Partial<UserSettings>) => setSettings({ ...settings, ...p });
+  const result = useMemo(() => runProjection(plan), [plan]);
+  const monteCarlo = useMemo(() => runMonteCarlo(plan), [plan]);
 
-  const country = findCountry(settings.locationId);
-  const custom = settings.customLocations.find((c) => c.id === settings.locationId);
-  const location = country
-    ? { name: country.name, lat: country.lat, lon: country.lon, hemisphere: country.hemisphere, climate: country.climate }
-    : custom
-      ? { name: custom.name, lat: custom.lat, lon: custom.lon, hemisphere: custom.hemisphere, climate: FALLBACK_CLIMATE }
-      : { name: COUNTRIES[0].name, lat: COUNTRIES[0].lat, lon: COUNTRIES[0].lon, hemisphere: COUNTRIES[0].hemisphere, climate: COUNTRIES[0].climate };
-
-  const { reading, status, errorMessage } = usePollenData({
-    lat: location.lat,
-    lon: location.lon,
-    hemisphere: location.hemisphere,
-    climate: location.climate,
-    dataMode: settings.dataMode,
-    manualLevels: settings.manualLevels,
-    refreshKey,
-  });
-
-  const recommendation = useMemo(() => (reading ? computeRecommendation(reading, settings) : null), [reading, settings]);
-
-  const addCustomLocation = (loc: CustomLocation) => {
-    setSettings({ ...settings, customLocations: [...settings.customLocations, loc], locationId: loc.id });
+  const set = <K extends keyof SimplePlan>(key: K, value: SimplePlan[K]) => {
+    setPlan({ ...plan, [key]: value });
   };
 
-  const removeCustomLocation = (id: string) => {
-    const remaining = settings.customLocations.filter((c) => c.id !== id);
-    setSettings({
-      ...settings,
-      customLocations: remaining,
-      locationId: settings.locationId === id ? DEFAULT_COUNTRY_ID : settings.locationId,
-    });
+  const setMany = (patch: Partial<SimplePlan>) => {
+    setPlan({ ...plan, ...patch });
   };
 
-  const markMedicineTaken = (id: string) => {
-    setSettings({
-      ...settings,
-      medicines: settings.medicines.map((m) => (m.id === id ? { ...m, lastTakenOn: todayKey() } : m)),
-    });
-  };
-
-  const markEyedropsUsed = () => {
-    setSettings({ ...settings, eyedrops: { ...settings.eyedrops, lastUsedOn: todayKey() } });
-  };
+  const annualPersonalContribution = plan.salary * (plan.savingsRatePercent / 100);
 
   return (
     <div className="min-h-screen bg-[var(--page-plane)]">
       <header className="sticky top-0 z-10 border-b border-[var(--border)] bg-[var(--surface-1)]/90 backdrop-blur">
-        <div className="mx-auto flex max-w-[900px] items-center justify-between gap-4 px-4 py-3 md:px-6">
+        <div className="mx-auto flex max-w-[1000px] items-center justify-between gap-4 px-4 py-3 md:px-6">
           <div>
-            <h1 className="text-lg font-semibold text-[var(--text-primary)]">Hayfever Tracker</h1>
-            <p className="text-xs text-[var(--text-muted)]">Pollen levels by location, and whether to take your medicine or eyedrops today</p>
+            <h1 className="text-lg font-semibold text-[var(--text-primary)]">Will I be rich?</h1>
+            <p className="text-xs text-[var(--text-muted)]">A simple investing calculator for the UK — no finance background needed</p>
           </div>
           <ThemeToggle theme={theme} setTheme={setTheme} />
         </div>
       </header>
 
-      <main className="mx-auto flex max-w-[900px] flex-col gap-4 p-4 md:px-6">
-        <SectionCard title="Location" help="Pick a country, or add your own place. Live data is used where available (Europe today), otherwise a seasonal estimate.">
-          <LocationPicker
-            locationId={settings.locationId}
-            customLocations={settings.customLocations}
-            onSelect={(id) => patch({ locationId: id })}
-            onAddCustom={addCustomLocation}
-            onRemoveCustom={removeCustomLocation}
-          />
-        </SectionCard>
+      <main className="mx-auto flex max-w-[1000px] flex-col gap-4 p-4 md:px-6">
+        <StepCard step={1} title="How much do you earn?" help="Your annual salary, before tax.">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-[var(--text-muted)]">£</span>
+            <input
+              type="number"
+              value={plan.salary || ""}
+              min={0}
+              step={1000}
+              onChange={(e) => set("salary", e.target.valueAsNumber || 0)}
+              className="w-40 rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1.5 text-sm tabular-nums text-[var(--text-primary)] focus:border-[var(--series-1)] focus:outline-none"
+            />
+            <span className="text-sm text-[var(--text-muted)]">per year</span>
+          </div>
+        </StepCard>
 
-        <SectionCard title={`Conditions in ${location.name}`}>
-          {status === "loading" && !reading ? (
-            <p className="text-sm text-[var(--text-muted)]">Loading conditions…</p>
-          ) : reading ? (
-            <>
-              {status === "error" && errorMessage && (
-                <p className="mb-3 rounded-md bg-[var(--status-critical)]/10 px-3 py-2 text-xs text-[var(--status-critical)]">
-                  Couldn't reach live data ({errorMessage}) — showing the seasonal estimate instead.
-                </p>
-              )}
-              <ConditionsPanel
-                reading={reading}
-                sensitivityLevel={settings.sensitivityLevel}
-                sensitiveTo={settings.sensitiveTo}
-                units={settings.units}
-                onRefresh={() => setRefreshKey((k) => k + 1)}
-                refreshing={status === "loading"}
-              />
-            </>
-          ) : null}
-        </SectionCard>
-
-        {recommendation && (
-          <RecommendationCard
-            recommendation={recommendation}
-            medicines={settings.medicines}
-            eyedrops={settings.eyedrops}
-            onMarkMedicineTaken={markMedicineTaken}
-            onMarkEyedropsUsed={markEyedropsUsed}
-          />
-        )}
-
-        <SectionCard
-          title="Settings"
-          help="Configure your sensitivities, medicines, eyedrop rules and units."
-          right={
-            <button
-              type="button"
-              onClick={() => setSettingsOpen((v) => !v)}
-              className="rounded-md border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:border-[var(--series-1)]"
-            >
-              {settingsOpen ? "Hide" : "Edit"}
-            </button>
-          }
+        <StepCard
+          step={2}
+          title="Your workplace pension"
+          help="UK auto-enrolment: if you're 22+ earning over £10,000/yr, your employer must pay in too. This is usually the best-value place to save first."
         >
-          {settingsOpen && <SettingsPanel settings={settings} onChange={patch} />}
-        </SectionCard>
+          <PensionSection plan={plan} onChange={setMany} />
+        </StepCard>
+
+        <StepCard
+          step={3}
+          title="Investing beyond your pension"
+          help="Money in a Stocks & Shares ISA or general account — no employer match here, but full access before retirement age."
+        >
+          <div className="flex flex-col gap-4">
+            <div>
+              <div className="flex items-center justify-between text-sm text-[var(--text-secondary)]">
+                <span>How much extra do you want to invest each year?</span>
+                <span className="tabular-nums text-[var(--text-primary)]">
+                  {plan.savingsRatePercent}% ({formatCurrency(annualPersonalContribution)}/yr)
+                </span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={50}
+                step={1}
+                value={plan.savingsRatePercent}
+                onChange={(e) => set("savingsRatePercent", Number(e.target.value))}
+                className="mt-2 h-1 w-full cursor-pointer appearance-none rounded-full bg-[var(--gridline)]"
+              />
+            </div>
+
+            <div>
+              <p className="mb-2 text-sm text-[var(--text-secondary)]">
+                What's it invested in? A "ticker" is the short code for a stock or fund (e.g. VWRL, AAPL).
+              </p>
+              <HoldingsEditor holdings={plan.holdings} onChange={(h) => set("holdings", h)} />
+            </div>
+          </div>
+        </StepCard>
+
+        <StepCard step={4} title="How long until you need this money?" help="E.g. until retirement, or a big goal like a house deposit.">
+          <div>
+            <div className="flex items-center justify-between text-sm text-[var(--text-secondary)]">
+              <span>Time horizon</span>
+              <span className="tabular-nums text-[var(--text-primary)]">
+                {plan.yearsHorizon} year{plan.yearsHorizon === 1 ? "" : "s"}
+              </span>
+            </div>
+            <input
+              type="range"
+              min={1}
+              max={40}
+              step={1}
+              value={plan.yearsHorizon}
+              onChange={(e) => set("yearsHorizon", Number(e.target.value))}
+              className="mt-2 h-1 w-full cursor-pointer appearance-none rounded-full bg-[var(--gridline)]"
+            />
+          </div>
+        </StepCard>
+
+        <ResultsPanel plan={plan} result={result} monteCarlo={monteCarlo} />
       </main>
 
-      <footer className="mx-auto max-w-[900px] px-4 pb-8 pt-4 text-center text-xs text-[var(--text-muted)] md:px-6">
-        Pollen and dry-eye estimates only, not medical advice. Live pollen data via Open-Meteo (CAMS Europe); everything else stays in your browser.
+      <footer className="mx-auto max-w-[1000px] px-4 pb-8 pt-4 text-center text-xs text-[var(--text-muted)] md:px-6">
+        Estimates only, using conservative assumptions — not financial advice. All data stays in your browser.
       </footer>
     </div>
   );

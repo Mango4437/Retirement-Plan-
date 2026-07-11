@@ -1,15 +1,20 @@
-export function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+const currencyFormatter = new Intl.NumberFormat("en-GB", {
+  style: "currency",
+  currency: "GBP",
+  maximumFractionDigits: 0,
+});
+
+const compactCurrencyFormatter = new Intl.NumberFormat("en-GB", {
+  style: "currency",
+  currency: "GBP",
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+
+export function formatCurrency(value: number): string {
+  return currencyFormatter.format(value);
 }
 
-export function todayKey(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-export function isToday(iso?: string): boolean {
-  return !!iso && iso.slice(0, 10) === todayKey();
-}
-
-export function kphToMph(kph: number): number {
-  return kph * 0.621371;
+export function formatCompactCurrency(value: number): string {
+  return compactCurrencyFormatter.format(value);
 }

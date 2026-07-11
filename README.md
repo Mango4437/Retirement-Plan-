@@ -1,24 +1,19 @@
-# Hayfever Tracker
+# Will I Be Rich?
 
-A configurable web app that answers two questions for wherever you are: **how bad is hayfever today, and should I take my medicine and eyedrops?**
+A dead-simple investing calculator for UK students/young people with zero finance background. It exists to teach one lesson: **saving feels like a barrier, but time is the actual lever** — starting now beats saving more later.
 
 ## How it works
 
-1. **Pick a location** — choose from ~50 countries or add your own place (lat/lon, or "use my current location"). Each country carries a rough climate profile (which pollen types run high there, and roughly when).
-2. **Get today's pollen levels** (`src/lib/pollenApi.ts`, `src/lib/seasonalModel.ts`):
-   - **Live data** where it exists — Open-Meteo's CAMS European air-quality model gives real tree/grass/weed pollen concentrations (grains/m³) for Europe, no API key needed.
-   - **Estimated fallback** everywhere else — a deterministic seasonal curve based on the month, hemisphere, and the location's climate profile. Always clearly labelled as an estimate, never presented as a measurement.
-   - **Manual entry** — if you'd rather type in today's level from a local source (or just don't trust an estimate), Settings lets you override each pollen type directly.
-   - Wind, humidity and precipitation come from Open-Meteo's global forecast API and feed into the dry-eye score.
-3. **Configure yourself, not just the app** (`src/lib/recommendation.ts`, Settings panel):
-   - Which pollen types you're actually sensitive to (tree / grass / weed) — types you're not sensitive to are shown but don't drive the verdict.
-   - An overall sensitivity dial (mild/normal/high) that shifts how easily a reading tips into the next level.
-   - A list of your hayfever medicines, each with its own "take at this level or above" trigger — add as many as you take.
-   - Eyedrop reminders with their own trigger level and a choice of which factors count toward dry-eye risk (pollen irritation, wind, low humidity).
-   - Units (km/h or mph).
-4. **Get a clear verdict** — a single Low/Moderate/High/Very High headline, plus a "recommended today / not needed" call for medicine and for eyedrops, each with the reasoning spelled out. "Mark as taken/used" checks it off for today.
+1. **How much do you earn?** — annual salary, before tax.
+2. **Your workplace pension** — models real UK auto-enrolment law (Pensions Act 2008, 2026/27 figures, `src/lib/ukPension.ts`): employer/employee minimums of 3%/5% of *qualifying earnings* (the band between £6,240–£50,270, not your whole salary), with the employee side correctly showing that only ~80% comes out of take-home pay — the rest is automatic basic-rate tax relief. Employer and tax-relief amounts are called out as "free money" you don't have to earn.
+3. **Investing beyond your pension** — a slider for extra ISA/general-account saving, plus tickers/holdings. A built-in offline reference table (`src/lib/tickers.ts`) maps ~20 common funds/stocks to a return & volatility assumption, so no live market data or API key is needed. Unrecognized tickers fall back to a simple risk-tier picker.
+4. **How long until you need the money?**
 
-Everything you configure is saved to `localStorage` only — nothing is sent anywhere except the anonymous, keyless calls to Open-Meteo for pollen/weather data.
+## Why the numbers are pessimistic on purpose
+
+Return assumptions in `tickers.ts` are deliberately lower than raw historical backtests (e.g. a global tracker assumes ~6%/yr, not the ~10% often quoted for the S&P 500) — headline historical averages are widely considered too optimistic to plan around today. The headline result on screen is the **10th-percentile ("cautious") outcome** from a 400-run Monte Carlo simulation, not the average case — you're shown what happens if markets underperform, with the median as a secondary figure. There's also a State Pension backstop note (current full amount, with an explicit warning not to rely on it) and a **"cost of waiting"** comparison that shows, in cash terms, what a 5-year delay actually costs — the core teaching point.
+
+An expandable "What am I assuming?" panel shows the exact blended return and every input, so it's never a black box.
 
 ## Getting started
 
@@ -37,9 +32,9 @@ npm run build
 
 ```
 src/
-  lib/            countries + climate profiles, live pollen/weather fetch, offline seasonal model, recommendation engine, types
-  hooks/          localStorage-backed settings, theme, the pollen/weather data-fetching hook
-  components/     location picker, conditions panel, recommendation card, settings panel, medicine editor
+  lib/            UK pension law, tickers reference table, growth/Monte Carlo calculator, types, formatting, chart math
+  hooks/          localStorage-backed state, theme
+  components/     the step cards, pension section, holdings editor, growth chart, results panel
 ```
 
-Pollen levels, dry-eye risk and medicine timing here are estimates to help you plan your day — not medical advice. If symptoms are severe or unusual, speak to a pharmacist or doctor.
+All figures are estimates using conservative planning assumptions, not predictions — this is a learning tool, not financial advice. Your plan is saved to your browser's `localStorage` only; nothing is sent anywhere.
