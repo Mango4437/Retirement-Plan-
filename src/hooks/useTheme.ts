@@ -4,7 +4,7 @@ import { useLocalStorage } from "./useLocalStorage";
 export type Theme = "light" | "dark" | "system";
 
 export function useTheme() {
-  const [theme, setTheme] = useLocalStorage<Theme>("actuary-planner:theme", "system");
+  const [theme, setTheme] = useLocalStorage<Theme>("investing-planner:theme", "system");
 
   useEffect(() => {
     const root = document.documentElement;

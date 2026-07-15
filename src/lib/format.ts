@@ -1,20 +1,20 @@
-const monthYearFormatter = new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric" });
+const currencyFormatter = new Intl.NumberFormat("en-GB", {
+  style: "currency",
+  currency: "GBP",
+  maximumFractionDigits: 0,
+});
 
-export function formatMonthYear(date: Date): string {
-  return monthYearFormatter.format(date);
+const compactCurrencyFormatter = new Intl.NumberFormat("en-GB", {
+  style: "currency",
+  currency: "GBP",
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+
+export function formatCurrency(value: number): string {
+  return currencyFormatter.format(value);
 }
 
-export function formatHours(hours: number): string {
-  return `${Math.round(hours).toLocaleString()} hrs`;
-}
-
-/** e.g. 18 -> "1 year 6 months", 6 -> "6 months" */
-export function formatDuration(totalMonths: number): string {
-  const rounded = Math.round(totalMonths);
-  const years = Math.floor(rounded / 12);
-  const months = rounded % 12;
-  const parts: string[] = [];
-  if (years > 0) parts.push(`${years} year${years === 1 ? "" : "s"}`);
-  if (months > 0 || parts.length === 0) parts.push(`${months} month${months === 1 ? "" : "s"}`);
-  return parts.join(" ");
+export function formatCompactCurrency(value: number): string {
+  return compactCurrencyFormatter.format(value);
 }

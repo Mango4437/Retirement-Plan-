@@ -1,20 +1,19 @@
-# Becoming an Actuary
+# Will I Be Rich?
 
-A configurable roadmap tool for anyone working towards an actuarial qualification. It exists to answer one question: **given where I am now, and how much time I can realistically give it, when do I actually qualify?**
+A dead-simple investing calculator for UK students/young people with zero finance background. It exists to teach one lesson: **saving feels like a barrier, but time is the actual lever** — starting now beats saving more later.
 
 ## How it works
 
-1. **Where are you starting from?** — education level, and whether you're already in an actuarial-adjacent role (analyst/trainee with exam support).
-2. **Pick your exam track** — Society of Actuaries (SOA, US/Canada), Casualty Actuarial Society (CAS, US/Canada P&C), or the Institute & Faculty of Actuaries (IFoA, UK). Each has its own exam codes, structure, and credential names (`src/lib/examData.ts`). Choose Associateship or Fellowship as your target.
-3. **What have you already completed?** — a checklist of every exam, VEE credit, module, and professionalism requirement for your chosen body and target, grouped by category.
-4. **Set your pace** — how many exams/sittings you'll attempt per year, and how many hours a week you can actually study.
+1. **How much do you earn?** — annual salary, before tax.
+2. **Your workplace pension** — models real UK auto-enrolment law (Pensions Act 2008, 2026/27 figures, `src/lib/ukPension.ts`): employer/employee minimums of 3%/5% of *qualifying earnings* (the band between £6,240–£50,270, not your whole salary), with the employee side correctly showing that only ~80% comes out of take-home pay — the rest is automatic basic-rate tax relief. Employer and tax-relief amounts are called out as "free money" you don't have to earn.
+3. **Investing beyond your pension** — a slider for extra ISA/general-account saving, plus tickers/holdings. A built-in offline reference table (`src/lib/tickers.ts`) maps ~20 common funds/stocks to a return & volatility assumption, so no live market data or API key is needed. Unrecognized tickers fall back to a simple risk-tier picker.
+4. **How long until you need the money?**
 
-## What you get
+## Why the numbers are pessimistic on purpose
 
-- A headline qualification date, based on your chosen pace.
-- A **reality check**: the study hours/week your chosen pace actually demands vs. what you said you have — and how much longer it'd really take if those don't match.
-- A visual timeline (`src/components/TimelineChart.tsx`) of every remaining requirement, sized by typical study hours and placed in sequence.
-- An expandable "What am I assuming?" panel explaining the hour estimates, the first-attempt assumption (real pass rates are ~40–50%, so build in buffer), and a pointer to check the official syllabus, since actuarial bodies revise their exam structures periodically.
+Return assumptions in `tickers.ts` are deliberately lower than raw historical backtests (e.g. a global tracker assumes ~6%/yr, not the ~10% often quoted for the S&P 500) — headline historical averages are widely considered too optimistic to plan around today. The headline result on screen is the **10th-percentile ("cautious") outcome** from a 400-run Monte Carlo simulation, not the average case — you're shown what happens if markets underperform, with the median as a secondary figure. There's also a State Pension backstop note (current full amount, with an explicit warning not to rely on it) and a **"cost of waiting"** comparison that shows, in cash terms, what a 5-year delay actually costs — the core teaching point.
+
+An expandable "What am I assuming?" panel shows the exact blended return and every input, so it's never a black box.
 
 ## Getting started
 
@@ -33,9 +32,9 @@ npm run build
 
 ```
 src/
-  lib/            exam body & syllabus data, roadmap/pacing calculator, types, formatting, chart math
+  lib/            UK pension law, tickers reference table, growth/Monte Carlo calculator, types, formatting, chart math
   hooks/          localStorage-backed state, theme
-  components/     step cards, choice cards, exam checklist, timeline chart, roadmap results panel
+  components/     the step cards, pension section, holdings editor, growth chart, results panel
 ```
 
-Study hour estimates are broad industry rules of thumb, not official figures from any actuarial body — this is a planning tool, not professional guidance. Your plan is saved to your browser's `localStorage` only; nothing is sent anywhere.
+All figures are estimates using conservative planning assumptions, not predictions — this is a learning tool, not financial advice. Your plan is saved to your browser's `localStorage` only; nothing is sent anywhere.
