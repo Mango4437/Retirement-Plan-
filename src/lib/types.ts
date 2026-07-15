@@ -1,63 +1,44 @@
-export type RiskTier = "conservative" | "moderate" | "aggressive";
+export type ExamBody = "SOA" | "CAS" | "IFoA";
+export type Credential = "associate" | "fellow";
+export type EducationLevel = "highschool" | "undergrad" | "graduate" | "careerSwitcher";
 
-export interface Holding {
-  id: string;
-  /** Ticker symbol if known, or a free-text label the student typed. */
-  ticker: string;
-  /** Current dollar amount held in this investment. */
-  amount: number;
-  /** Only set when the ticker isn't in the built-in reference table. */
-  riskTier?: RiskTier;
+export type MilestoneCategory = "preliminary" | "vee" | "fap" | "core" | "specialist" | "advanced" | "professionalism";
+
+export interface Milestone {
+  code: string;
+  name: string;
+  category: MilestoneCategory;
+  /** Rough study hours a first-time candidate typically needs. */
+  hours: number;
+  /** Only required if the candidate is targeting Fellowship, not just Associateship. */
+  fellowOnly?: boolean;
 }
 
-export interface SimplePlan {
-  /** Annual salary/income, before tax. */
-  salary: number;
-  /** Workplace pension: auto-enrolment on/off. */
-  pensionEnabled: boolean;
-  /** % of qualifying earnings, employee side (UK minimum 5%, includes tax relief). */
-  employeePensionPercent: number;
-  /** % of qualifying earnings, employer side (UK minimum 3%). */
-  employerPensionPercent: number;
-  /** % of salary invested each year outside the pension (ISA/general account). */
-  savingsRatePercent: number;
-  holdings: Holding[];
-  /** Years from now until the money is needed. */
-  yearsHorizon: number;
+export interface CareerPlan {
+  examBody: ExamBody;
+  educationLevel: EducationLevel;
+  targetCredential: Credential;
+  /** Codes of milestones already completed. */
+  completed: string[];
+  /** How many exams/modules the candidate commits to attempting per year. */
+  examsPerYear: number;
+  studyHoursPerWeek: number;
+  hasActuarialJob: boolean;
 }
 
-export interface YearPoint {
-  year: number;
-  balance: number;
-  contributed: number;
+export interface RoadmapItem extends Milestone {
+  startMonth: number;
+  endMonth: number;
 }
 
-export interface ProjectionResult {
-  years: YearPoint[];
-  startingBalance: number;
-  annualContribution: number;
-  annualPensionContribution: number;
-  annualPersonalContribution: number;
-  annualEmployeeNetCost: number;
-  annualEmployerContribution: number;
-  annualTaxReliefFreebie: number;
-  blendedReturn: number;
-  blendedVolatility: number;
-  finalBalance: number;
-  totalContributed: number;
-  totalGrowth: number;
-}
-
-export interface MonteCarloBand {
-  year: number;
-  p10: number;
-  p50: number;
-  p90: number;
-}
-
-export interface MonteCarloResult {
-  bands: MonteCarloBand[];
-  /** The pessimistic (10th percentile) final balance — plan around this, not the average. */
-  pessimisticFinalBalance: number;
-  medianFinalBalance: number;
+export interface RoadmapResult {
+  remaining: RoadmapItem[];
+  totalRemainingHours: number;
+  totalMonths: number;
+  completionDate: Date;
+  requiredWeeklyHours: number;
+  paceIsRealistic: boolean;
+  realisticMonths: number;
+  completedCount: number;
+  totalCount: number;
 }
